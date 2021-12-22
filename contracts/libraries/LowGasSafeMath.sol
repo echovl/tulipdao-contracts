@@ -35,6 +35,10 @@ library LowGasSafeMath {
         require(x == 0 || (z = x * y) / x == y);
     }
 
+    function mul32(uint32 x, uint32 y) internal pure returns (uint32 z) {
+        require(x == 0 || (z = x * y) / x == y);
+    }
+
     /// @notice Returns x + y, reverts if overflows or underflows
     /// @param x The augend
     /// @param y The addend
@@ -51,8 +55,21 @@ library LowGasSafeMath {
         require((z = x - y) <= x == (y >= 0));
     }
 
-    function div(uint256 x, uint256 y) internal pure returns(uint256 z) {
+    function div(uint256 x, uint256 y) internal pure returns (uint256 z) {
         require(y > 0);
         z = x / y;
+    }
+
+    function sqrrt(uint256 a) internal pure returns (uint256 c) {
+        if (a > 3) {
+            c = a;
+            uint256 b = add(div(a, 2), 1);
+            while (b < c) {
+                c = b;
+                b = div(add(div(a, b), b), 2);
+            }
+        } else if (a != 0) {
+            c = 1;
+        }
     }
 }

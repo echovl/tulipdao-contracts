@@ -17,19 +17,20 @@ abstract contract ERC20Permit is ERC20, IERC2612Permit {
     bytes32 public immutable DOMAIN_SEPARATOR;
 
     constructor() {
-
         uint256 chainID;
         assembly {
             chainID := chainid()
         }
 
-        DOMAIN_SEPARATOR = keccak256(abi.encode(
-            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-            keccak256(bytes(name())),
-            keccak256(bytes("1")), // Version
-            chainID,
-            address(this)
-        ));
+        DOMAIN_SEPARATOR = keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes(name())),
+                keccak256(bytes("1")), // Version
+                chainID,
+                address(this)
+            )
+        );
     }
 
     /**
@@ -47,8 +48,9 @@ abstract contract ERC20Permit is ERC20, IERC2612Permit {
     ) public virtual override {
         require(block.timestamp <= deadline, "Permit: expired deadline");
 
-        bytes32 hashStruct =
-            keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, amount, _nonces[owner].current(), deadline));
+        bytes32 hashStruct = keccak256(
+            abi.encode(PERMIT_TYPEHASH, owner, spender, amount, _nonces[owner].current(), deadline)
+        );
 
         bytes32 _hash = keccak256(abi.encodePacked(uint16(0x1901), DOMAIN_SEPARATOR, hashStruct));
 

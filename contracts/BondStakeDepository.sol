@@ -7,6 +7,7 @@ import "./interfaces/ITreasury.sol";
 import "./interfaces/IStaking.sol";
 import "./interfaces/IStakingHelper.sol";
 import "./interfaces/IBondCalculator.sol";
+import "./interfaces/IsTulipERC20.sol";
 
 import "./libraries/FixedPoint.sol";
 import "./libraries/SafeERC20.sol";
@@ -14,9 +15,10 @@ import "./libraries/LowGasSafeMath.sol";
 
 import "./types/Ownable.sol";
 
-contract TulipBondDepository is Ownable {
+contract TulipBondStakeDepository is Ownable {
     using FixedPoint for *;
     using SafeERC20 for IERC20;
+    using SafeERC20 for IsTulipERC20;
     using LowGasSafeMath for uint256;
     using LowGasSafeMath for uint32;
 
@@ -35,6 +37,7 @@ contract TulipBondDepository is Ownable {
     /* ======== STATE VARIABLES ======== */
 
     IERC20 public immutable Tulip; // token given as payment for bond
+    IsTulipERC20 public immutable sTulip; // staked token given as a payment for bond
     IERC20 public immutable principle; // token used to create bond
     ITreasury public immutable treasury; // mints Tulip when receives principle
     address public immutable DAO; // receives profit share from bond
@@ -66,14 +69,19 @@ contract TulipBondDepository is Ownable {
         uint256 fee; // as % of bond payout, in hundreths. ( 500 = 5% = 0.05 for every 1 paid)
         uint256 maxDebt; // 9 decimal debt ratio, max % total supply created as debt
         uint32 vestingTerm; // in seconds
+        uint32 epochLength; // in seconds
     }
 
     // Info for bond holder
     struct Bond {
-        uint256 payout; // Tulip remaining to be paid
+        uint256 payout; // Staked Tulip (in gons) remaining to be paid
         uint256 pricePaid; // In DAI, for front end viewing
+        uint32 startTime; // Creation time
         uint32 lastTime; // Last interaction
-        uint32 vesting; // Seconds left to vest
+        uint32 vesting; // Seconds left to fully vest
+        uint32 epochLength;
+        uint32 lastEpoch;
+        uint32 maxEpoch;
     }
 
     // Info for incremental adjustments to control variable
@@ -89,6 +97,7 @@ contract TulipBondDepository is Ownable {
 
     constructor(
         address _Tulip,
+        address _sTulip,
         address _principle,
         address _treasury,
         address _DAO,
@@ -96,6 +105,8 @@ contract TulipBondDepository is Ownable {
     ) {
         require(_Tulip != address(0));
         Tulip = IERC20(_Tulip);
+        require(_sTulip != address(0));
+        sTulip = IsTulipERC20(_sTulip);
         require(_principle != address(0));
         principle = IERC20(_principle);
         require(_treasury != address(0));
@@ -122,20 +133,23 @@ contract TulipBondDepository is Ownable {
         uint256 _maxPayout,
         uint256 _fee,
         uint256 _maxDebt,
-        uint32 _vestingTerm
+        uint32 _vestingTerm,
+        uint32 _epochLength
     ) external onlyOwner {
         require(terms.controlVariable == 0, "Bonds must be initialized from 0");
         //require(_controlVariable >= 40, "Can lock adjustment");
         //require(_maxPayout <= 1000, "Payout cannot be above 1 percent");
         //require(_fee <= 10000, "DAO fee cannot exceed payout");
         require(_vestingTerm >= 129600, "Vesting must be longer than 36 hours");
+        require(_vestingTerm % _epochLength == 0, "Vesting term should be divisible by the epoch length");
         terms = Terms({
             controlVariable: _controlVariable,
             minimumPrice: _minimumPrice,
             maxPayout: _maxPayout,
             fee: _fee,
             maxDebt: _maxDebt,
-            vestingTerm: _vestingTerm
+            vestingTerm: _vestingTerm,
+            epochLength: _epochLength
         });
         lastDecay = uint32(block.timestamp);
         emit InitTerms(terms);
@@ -145,6 +159,7 @@ contract TulipBondDepository is Ownable {
 
     enum PARAMETER {
         VESTING,
+        EPOCHLENGTH,
         PAYOUT,
         FEE,
         DEBT,
@@ -160,7 +175,11 @@ contract TulipBondDepository is Ownable {
         if (_parameter == PARAMETER.VESTING) {
             // 0
             require(_input >= 129600, "Vesting must be longer than 36 hours");
+            require(_input % terms.epochLength == 0, "Vesting term should be divisible by the epoch length");
             terms.vestingTerm = uint32(_input);
+        } else if (_parameter == PARAMETER.EPOCHLENGTH) {
+            require(terms.vestingTerm % _input == 0, "Vesting term should be divisible by the epoch length");
+            terms.epochLength = uint32(_input);
         } else if (_parameter == PARAMETER.PAYOUT) {
             // 1
             require(_input <= 1000, "Payout cannot be above 1 percent");
@@ -281,12 +300,26 @@ contract TulipBondDepository is Ownable {
         // total debt is increased
         totalDebt = totalDebt.add(value);
 
+        Tulip.approve(address(staking), payout);
+        if (useHelper) {
+            stakingHelper.stake(payout, address(this));
+        } else {
+            staking.stake(payout, address(this));
+            staking.claim(address(this));
+        }
+
+        uint256 balance = sTulip.gonsForBalance(payout);
+
         // depositor info is stored
         bondInfo[_depositor] = Bond({
-            payout: bondInfo[_depositor].payout.add(payout),
+            payout: bondInfo[_depositor].payout.add(balance),
             vesting: terms.vestingTerm,
+            startTime: uint32(block.timestamp),
             lastTime: uint32(block.timestamp),
-            pricePaid: priceInUSD
+            pricePaid: priceInUSD,
+            epochLength: terms.epochLength,
+            maxEpoch: terms.vestingTerm / terms.epochLength,
+            lastEpoch: 0
         });
 
         // indexed events are emitted
@@ -306,61 +339,47 @@ contract TulipBondDepository is Ownable {
     function redeem(address _recipient, bool _stake) external returns (uint256) {
         require(msg.sender == _recipient, "NA");
         Bond memory info = bondInfo[_recipient];
-        // (seconds since last interaction / vesting term remaining)
-        uint256 percentVested = percentVestedFor(_recipient);
 
-        if (percentVested >= 10000) {
+        uint32 currentEpoch = uint32(block.timestamp).sub32(info.startTime) / info.epochLength;
+
+        require(currentEpoch > info.lastEpoch, "not yet vested");
+
+        if (currentEpoch >= info.maxEpoch) {
             // if fully vested
-            delete bondInfo[_recipient]; // delete user info
-            emit BondRedeemed(_recipient, info.payout, 0); // emit bond data
-            return stakeOrSend(_recipient, _stake, info.payout); // pay user everything due
+            uint256 amount = sTulip.balanceForGons(info.payout);
+            sTulip.safeTransfer(_recipient, amount);
+
+            delete bondInfo[_recipient];
+
+            emit BondRedeemed(_recipient, amount, 0);
+
+            return amount;
         } else {
-            // if unfinished
-            // calculate payout vested
-            uint256 payout = info.payout.mul(percentVested) / 10000;
+            uint256 payout = info.payout.mul(currentEpoch - info.lastEpoch) / info.maxEpoch;
+
             // store updated deposit info
             bondInfo[_recipient] = Bond({
                 payout: info.payout.sub(payout),
                 vesting: info.vesting.sub32(uint32(block.timestamp).sub32(info.lastTime)),
+                startTime: info.startTime,
                 lastTime: uint32(block.timestamp),
-                pricePaid: info.pricePaid
+                pricePaid: info.pricePaid,
+                epochLength: info.epochLength,
+                maxEpoch: info.maxEpoch,
+                lastEpoch: currentEpoch
             });
 
-            emit BondRedeemed(_recipient, payout, bondInfo[_recipient].payout);
-            return stakeOrSend(_recipient, _stake, payout);
+            uint256 amount = sTulip.balanceForGons(payout);
+            uint256 remaining = sTulip.balanceForGons(bondInfo[_recipient].payout);
+            sTulip.safeTransfer(_recipient, amount);
+
+            emit BondRedeemed(_recipient, amount, remaining);
+
+            return amount;
         }
     }
 
     /* ======== INTERNAL HELPER FUNCTIONS ======== */
-
-    /**
-     *  @notice allow user to stake payout automatically
-     *  @param _stake bool
-     *  @param _amount uint
-     *  @return uint
-     */
-    function stakeOrSend(
-        address _recipient,
-        bool _stake,
-        uint256 _amount
-    ) internal returns (uint256) {
-        if (!_stake) {
-            // if user does not want to stake
-            Tulip.transfer(_recipient, _amount); // send payout
-        } else {
-            // if user wants to stake
-            if (useHelper) {
-                // use if staking warmup is 0
-                Tulip.approve(address(stakingHelper), _amount);
-                stakingHelper.stake(_amount, _recipient);
-            } else {
-                Tulip.approve(address(staking), _amount);
-                staking.stake(_amount, _recipient);
-            }
-        }
-        return _amount;
-    }
-
     /**
      *  @notice makes incremental adjustment to control variable
      */
@@ -515,13 +534,16 @@ contract TulipBondDepository is Ownable {
      *  @return pendingPayout_ uint
      */
     function pendingPayoutFor(address _depositor) external view returns (uint256 pendingPayout_) {
-        uint256 percentVested = percentVestedFor(_depositor);
-        uint256 payout = bondInfo[_depositor].payout;
+        Bond memory info = bondInfo[_depositor];
+        uint32 currentEpoch = uint32(block.timestamp).sub32(info.startTime) / info.epochLength;
 
-        if (percentVested >= 10000) {
-            pendingPayout_ = payout;
+        if (currentEpoch == info.lastEpoch) {
+            pendingPayout_ = 0;
+        } else if (currentEpoch >= info.maxEpoch) {
+            pendingPayout_ = sTulip.balanceForGons(info.payout);
         } else {
-            pendingPayout_ = payout.mul(percentVested) / 10000;
+            uint256 payout = info.payout.mul(currentEpoch - info.lastEpoch) / info.maxEpoch;
+            pendingPayout_ = sTulip.balanceForGons(payout);
         }
     }
 
