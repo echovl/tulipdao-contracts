@@ -1,4 +1,20 @@
 const hre = require("hardhat")
+const fs = require("fs")
+
+const ARGUMENTS_DIR = "./deploy/arguments"
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
+
+function saveArguments(filename, ...args) {
+    fs.writeFileSync(`${ARGUMENTS_DIR}/${filename}`, parseArguments(...args))
+}
+
+function parseArguments(...args) {
+    const parsedArgs = args.map((arg) => {
+        return typeof arg == "string" ? `"${arg}"` : arg
+    })
+
+    return `module.exports = [${parsedArgs.join(",")}]`
+}
 
 async function main() {
     const accounts = await hre.ethers.getSigners()
@@ -7,14 +23,14 @@ async function main() {
     let epochLength = 60 * 60 * 1
     let firstEpochTime = Math.round(Date.now() / 1000) + 60 * 60
 
-    if (hre.network.name == "testnet" || hre.network.name == "hardhat") {
-        const MIM = await hre.ethers.getContractFactory("Token")
-        const mim = await MIM.deploy("Magic Internet Money", "MIM", 18)
-        await mim.deployed()
-        mimAddress = mim.address
+    const MIM = await hre.ethers.getContractFactory("Token")
+    const mim = await MIM.deploy("Magic Internet Money", "MIM", 18)
+    await mim.deployed()
+    mimAddress = mim.address
 
-        console.log("MIM token deployed  to: ", mim.address)
-    }
+    saveArguments("mim.js", "Magic Internet Money", "MIM", 18)
+
+    console.log("MIM token deployed  to: ", mim.address)
 
     const TULIP = await hre.ethers.getContractFactory("TulipERC20Token")
     const tulip = await TULIP.deploy()
@@ -32,6 +48,13 @@ async function main() {
     const treasury = await TREASURY.deploy(tulip.address, mimAddress, 100)
     await treasury.deployed()
 
+    saveArguments(
+        "treasury.js",
+        tulip.address.toString(),
+        mimAddress.toString(),
+        100
+    )
+
     console.log("Treasury deployed  to: ", treasury.address)
 
     const CALCULATOR = await hre.ethers.getContractFactory(
@@ -39,6 +62,8 @@ async function main() {
     )
     const calculator = await CALCULATOR.deploy(tulip.address)
     await calculator.deployed()
+
+    saveArguments("calculator.js", tulip.address.toString())
 
     console.log("Bonding Calculator deployed  to: ", calculator.address)
 
@@ -50,9 +75,18 @@ async function main() {
         mimAddress,
         treasury.address,
         accounts[0].address,
-        calculator.address
+        ZERO_ADDRESS
     )
     await bondDepository.deployed()
+
+    saveArguments(
+        "bondDepository.js",
+        tulip.address.toString(),
+        mimAddress.toString(),
+        treasury.address.toString(),
+        accounts[0].address.toString(),
+        ZERO_ADDRESS
+    )
 
     console.log("MIM Bond Depository deployed  to: ", bondDepository.address)
 
@@ -65,9 +99,19 @@ async function main() {
         mimAddress,
         treasury.address,
         accounts[0].address,
-        calculator.address
+        ZERO_ADDRESS
     )
     await bondStakeDepository.deployed()
+
+    saveArguments(
+        "bondStakeDepository.js",
+        tulip.address.toString(),
+        sTulip.address.toString(),
+        mimAddress.toString(),
+        treasury.address.toString(),
+        accounts[0].address.toString(),
+        ZERO_ADDRESS
+    )
 
     console.log(
         "MIM Bond Stake Depository deployed  to: ",
@@ -84,11 +128,26 @@ async function main() {
     )
     await staking.deployed()
 
+    saveArguments(
+        "staking.js",
+        tulip.address.toString(),
+        sTulip.address.toString(),
+        epochLength,
+        1,
+        firstEpochTime
+    )
+
     console.log("Staking deployed  to: ", staking.address)
 
     const WARMUP = await hre.ethers.getContractFactory("TulipStakingWarmup")
     const warmup = await WARMUP.deploy(staking.address, sTulip.address)
     await warmup.deployed()
+
+    saveArguments(
+        "warmup.js",
+        staking.address.toString(),
+        sTulip.address.toString()
+    )
 
     console.log("Staking Warmup deployed  to: ", warmup.address)
 
@@ -101,6 +160,14 @@ async function main() {
     )
     await distributor.deployed()
 
+    saveArguments(
+        "distributor.js",
+        treasury.address.toString(),
+        tulip.address.toString(),
+        epochLength,
+        firstEpochTime
+    )
+
     console.log("Distributor deployed  to: ", distributor.address)
 
     const STAKINGHELPER = await hre.ethers.getContractFactory(
@@ -111,6 +178,12 @@ async function main() {
         tulip.address
     )
     await stakingHelper.deployed()
+
+    saveArguments(
+        "stakingHelper.js",
+        staking.address.toString(),
+        tulip.address.toString()
+    )
 
     console.log("Staking Helper deployed  to: ", stakingHelper.address)
 }

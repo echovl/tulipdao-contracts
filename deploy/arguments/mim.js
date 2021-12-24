@@ -1,0 +1,1 @@
+module.exports = ["Magic Internet Money","MIM",18]

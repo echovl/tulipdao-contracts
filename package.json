@@ -8,7 +8,7 @@
         "compile": "hardhat compile",
         "clean": "hardhat clean",
         "deploy:hh": "hardhat run ./scripts/deploy.js",
-        "deploy:testnet": "hardhat run ./scripts/deploy.js --network testnet",
+        "deploy:testnet": "hardhat run ./scripts/deploy.js --network rinkeby",
         "prettier": "prettier --write \"contracts/**/*.sol\""
     },
     "author": "",
@@ -23,6 +23,7 @@
         "ethers": "^5.5.2",
         "hardhat": "^2.8.0",
         "prettier": "^2.5.1",
-        "prettier-plugin-solidity": "^1.0.0-beta.19"
+        "prettier-plugin-solidity": "^1.0.0-beta.19",
+        "solpp": "^0.11.3"
     }
 }

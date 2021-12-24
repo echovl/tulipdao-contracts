@@ -1,0 +1,11 @@
+MIM token deployed  to:  0x666d54845D1a48F6A120bf9ADCAc7d35C9b4596b
+Tulip token deployed  to:  0x1749926b3B935a07bdb5F049508ceD7824500f11
+Staked Tulip token deployed  to:  0xeF542a8e732F4FBBe7c009E163237242CEfAaA52
+Treasury deployed  to:  0xd319f956ca48B3219a4CC04Daf3A7B0c7f61b40F
+Bonding Calculator deployed  to:  0xDdAC78E143bD9c03F7D06Df5018C87695f1696b9
+MIM Bond Depository deployed  to:  0xc88591b0D9823319b1ed51D127dbC0E6d728878c
+MIM Bond Stake Depository deployed  to:  0xaeB6C941cFb0CAC1Cd438360CF646C71171e1B53
+Staking deployed  to:  0x03376623Dcc9E85b4692e45fC4179c2f00F50D3A
+Staking Warmup deployed  to:  0x19ef51271333b71579B2F9430BBD3b6e9eCBeEfD
+Distributor deployed  to:  0xcff0C9141Ca86DF8FE96E75F13CD2b5DF0e0cc96
+Staking Helper deployed  to:  0x396A2b35F7949d6DF3F5E6dd6E7B1320062ef544

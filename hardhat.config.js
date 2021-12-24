@@ -34,9 +34,6 @@ module.exports = {
                     },
                 },
             },
-            {
-                version: "0.5.16",
-            },
         ],
         settings: {
             optimizer: {
@@ -51,6 +48,17 @@ module.exports = {
             accounts: [process.env.TESTNET_PRIVATE_KEY],
             chainId: 4002,
         },
+        kovan: {
+            url: process.env.KOVAN_ALCHEMY_URL,
+            accounts: [process.env.TESTNET_PRIVATE_KEY],
+        },
+        rinkeby: {
+            url: process.env.RINKEBY_ALCHEMY_URL,
+            accounts: [process.env.TESTNET_PRIVATE_KEY],
+        },
+    },
+    solpp: {
+        noFlatten: false,
     },
     etherscan: {
         apiKey: `${process.env.ETHERSCAN_API_KEY}`,
