@@ -5,13 +5,14 @@ pragma abicoder v2;
 import "./interfaces/IERC20.sol";
 import "./interfaces/ITulipERC20.sol";
 import "./interfaces/IBondCalculator.sol";
+import "./interfaces/ITreasury.sol";
 
 import "./libraries/LowGasSafeMath.sol";
 import "./libraries/SafeERC20.sol";
 
 import "./types/Ownable.sol";
 
-contract TulipTreasury is Ownable {
+contract TulipTreasury is Ownable, ITreasury {
     using LowGasSafeMath for uint256;
     using LowGasSafeMath for uint32;
     using SafeERC20 for IERC20;
@@ -116,7 +117,7 @@ contract TulipTreasury is Ownable {
         uint256 _amount,
         address _token,
         uint256 _profit
-    ) external returns (uint256 send_) {
+    ) external override returns (uint256 send_) {
         require(isReserveToken[_token] || isLiquidityToken[_token], "Not accepted");
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
 
@@ -127,13 +128,14 @@ contract TulipTreasury is Ownable {
         }
 
         uint256 value = valueOf(_token, _amount);
+
         // mint Tulip needed and store amount of rewards for distribution
         send_ = value.sub(_profit);
         Tulip.mint(msg.sender, send_);
 
         totalReserves = totalReserves.add(value);
-        emit ReservesUpdated(totalReserves);
 
+        emit ReservesUpdated(totalReserves);
         emit Deposit(_token, _amount, value);
     }
 
@@ -246,7 +248,7 @@ contract TulipTreasury is Ownable {
     /**
         @notice send epoch reward to staking contract
      */
-    function mintRewards(address _recipient, uint256 _amount) external {
+    function mintRewards(address _recipient, uint256 _amount) external override {
         require(isRewardManager[msg.sender], "Not approved");
         require(_amount <= excessReserves(), "Insufficient reserves");
         Tulip.mint(_recipient, _amount);
@@ -285,7 +287,7 @@ contract TulipTreasury is Ownable {
         @param _amount uint
         @return value_ uint
      */
-    function valueOf(address _token, uint256 _amount) public view returns (uint256 value_) {
+    function valueOf(address _token, uint256 _amount) public view override returns (uint256 value_) {
         if (isReserveToken[_token]) {
             // convert amount to match Tulip decimals
             value_ = _amount.mul(10**Tulip.decimals()).div(10**IERC20(_token).decimals());

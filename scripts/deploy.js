@@ -45,14 +45,14 @@ async function main() {
     console.log("Staked Tulip token deployed  to: ", sTulip.address)
 
     const TREASURY = await hre.ethers.getContractFactory("TulipTreasury")
-    const treasury = await TREASURY.deploy(tulip.address, mimAddress, 100)
+    const treasury = await TREASURY.deploy(tulip.address, mimAddress, 0)
     await treasury.deployed()
 
     saveArguments(
         "treasury.js",
         tulip.address.toString(),
         mimAddress.toString(),
-        100
+        0
     )
 
     console.log("Treasury deployed  to: ", treasury.address)
