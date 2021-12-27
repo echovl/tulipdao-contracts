@@ -9,17 +9,17 @@ async function main() {
     const accounts = await hre.ethers.getSigners()
     const owner = accounts[0]
 
-    const LP = "0x0C504777d44EE4E371F291834dfc3a040D15A289"
-    const TULIP = "0x504C3ECd1BD99EF212C209E405D58b7CB4545EB1"
-    const CALCULATOR = "0x2E0070678aC722c9aacfE6e06E11246A826AD448"
-    const TREASURY = "0x1a878EF1C14DFC4B15546F116696e1B08DBa16Fa"
-    const STAKING = "0x1C5Af163DBfDcFd88942c457cF6bC9b7c6980EF7"
+    const LP = "0xAAE789866dE94dA3485430c76138b8e7C31A4604"
+    const TULIP = "0x9132c80CE2ac8bf036676e54E3011667D4FEfEB2"
+    const CALCULATOR = "0x98f41863423aA6941f191Ffb21aC99bC3E30eE28"
+    const TREASURY = "0xE3AbC3e7Fcca778d944D56F6dd1d1F63Db0a3e84"
+    const STAKING = "0xB8669cEDA69E90AF7d2a20f9d1D3553394369Fe1"
 
     // Bond parameters
     const bondControlVariable = 500
     const bondMinPrice = 1000 // 10 usd
     const bondMaxPayout = 5000 // 5% total supply
-    const bondFee = 0
+    const bondFee = 500 // 5% of payouts
     const bondMaxDebt = BigNumber.from("10000000000000000000") // max total debt, 9 decimals
     const bondVestingTerm = 129600 // 36 hours
     //const bondEpochLength = 3600
