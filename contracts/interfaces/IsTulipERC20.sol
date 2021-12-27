@@ -5,11 +5,9 @@ pragma abicoder v2;
 import "./IERC20.sol";
 
 interface IsTulipERC20 is IERC20 {
-    function rebase(uint256 ohmProfit_, uint256 epoch_) external returns (uint256);
+    function rebase(uint256 ohmProfit, uint256 epoch) external returns (uint256);
 
     function circulatingSupply() external view returns (uint256);
-
-    function balanceOf(address who) external view override returns (uint256);
 
     function gonsForBalance(uint256 amount) external view returns (uint256);
 

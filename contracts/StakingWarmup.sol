@@ -3,8 +3,9 @@ pragma solidity 0.7.5;
 pragma abicoder v2;
 
 import "./interfaces/IERC20.sol";
+import "./interfaces/IWarmup.sol";
 
-contract TulipStakingWarmup {
+contract TulipStakingWarmup is IWarmup {
     address public immutable staking;
     IERC20 public immutable sTulip;
 
@@ -15,7 +16,7 @@ contract TulipStakingWarmup {
         sTulip = IERC20(_sTulip);
     }
 
-    function retrieve(address _staker, uint256 _amount) external {
+    function retrieve(address _staker, uint256 _amount) external override {
         require(msg.sender == staking, "NA");
         sTulip.transfer(_staker, _amount);
     }

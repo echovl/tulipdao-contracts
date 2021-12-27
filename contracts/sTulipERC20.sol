@@ -2,12 +2,14 @@
 pragma solidity 0.7.5;
 pragma abicoder v2;
 
+import "./interfaces/IsTulipERC20.sol";
+
 import "./libraries/LowGasSafeMath.sol";
 
 import "./types/Ownable.sol";
 import "./types/ERC20Permit.sol";
 
-contract sTulipERC20Token is ERC20Permit, Ownable {
+contract sTulipERC20Token is IsTulipERC20, ERC20Permit, Ownable {
     using LowGasSafeMath for uint256;
 
     modifier onlyStakingContract() {
@@ -81,7 +83,7 @@ contract sTulipERC20Token is ERC20Permit, Ownable {
         @param profit_ uint256
         @return uint256
      */
-    function rebase(uint256 profit_, uint256 epoch_) public onlyStakingContract returns (uint256) {
+    function rebase(uint256 profit_, uint256 epoch_) public override onlyStakingContract returns (uint256) {
         uint256 rebaseAmount;
         uint256 circulatingSupply_ = circulatingSupply();
 
@@ -140,28 +142,28 @@ contract sTulipERC20Token is ERC20Permit, Ownable {
         return true;
     }
 
-    function balanceOf(address who) public view override returns (uint256) {
+    function balanceOf(address who) public view override(IERC20, ERC20) returns (uint256) {
         return _gonBalances[who].div(_gonsPerFragment);
     }
 
-    function gonsForBalance(uint256 amount) public view returns (uint256) {
+    function gonsForBalance(uint256 amount) public view override returns (uint256) {
         return amount.mul(_gonsPerFragment);
     }
 
-    function balanceForGons(uint256 gons) public view returns (uint256) {
+    function balanceForGons(uint256 gons) public view override returns (uint256) {
         return gons.div(_gonsPerFragment);
     }
 
     // Staking contract holds excess sTulip
-    function circulatingSupply() public view returns (uint256) {
+    function circulatingSupply() public view override returns (uint256) {
         return _totalSupply.sub(balanceOf(stakingContract));
     }
 
-    function index() public view returns (uint256) {
+    function index() public view override returns (uint256) {
         return balanceForGons(INDEX);
     }
 
-    function transfer(address to, uint256 value) public override returns (bool) {
+    function transfer(address to, uint256 value) public override(IERC20, ERC20) returns (bool) {
         uint256 gonValue = value.mul(_gonsPerFragment);
         _gonBalances[msg.sender] = _gonBalances[msg.sender].sub(gonValue);
         _gonBalances[to] = _gonBalances[to].add(gonValue);
@@ -169,7 +171,7 @@ contract sTulipERC20Token is ERC20Permit, Ownable {
         return true;
     }
 
-    function allowance(address owner_, address spender) public view override returns (uint256) {
+    function allowance(address owner_, address spender) public view override(IERC20, ERC20) returns (uint256) {
         return _allowedValue[owner_][spender];
     }
 
@@ -177,7 +179,7 @@ contract sTulipERC20Token is ERC20Permit, Ownable {
         address from,
         address to,
         uint256 value
-    ) public override returns (bool) {
+    ) public override(IERC20, ERC20) returns (bool) {
         _allowedValue[from][msg.sender] = _allowedValue[from][msg.sender].sub(value);
         emit Approval(from, msg.sender, _allowedValue[from][msg.sender]);
 
@@ -189,7 +191,7 @@ contract sTulipERC20Token is ERC20Permit, Ownable {
         return true;
     }
 
-    function approve(address spender, uint256 value) public override returns (bool) {
+    function approve(address spender, uint256 value) public override(IERC20, ERC20) returns (bool) {
         _allowedValue[msg.sender][spender] = value;
         emit Approval(msg.sender, spender, value);
         return true;

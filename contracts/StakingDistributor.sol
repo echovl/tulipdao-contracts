@@ -4,12 +4,13 @@ pragma abicoder v2;
 
 import "./interfaces/IERC20.sol";
 import "./interfaces/ITreasury.sol";
+import "./interfaces/IDistributor.sol";
 
 import "./libraries/LowGasSafeMath.sol";
 
 import "./types/Ownable.sol";
 
-contract TulipDistributor is Ownable {
+contract TulipDistributor is Ownable, IDistributor {
     using LowGasSafeMath for uint256;
     using LowGasSafeMath for uint32;
 
@@ -63,7 +64,7 @@ contract TulipDistributor is Ownable {
     /**
         @notice send epoch reward to staking contract
      */
-    function distribute() external returns (bool) {
+    function distribute() external override returns (bool) {
         if (nextEpochTime <= uint32(block.timestamp)) {
             nextEpochTime = nextEpochTime.add32(epochLength); // set next epoch time
 

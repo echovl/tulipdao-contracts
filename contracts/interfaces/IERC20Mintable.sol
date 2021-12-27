@@ -3,5 +3,5 @@ pragma solidity 0.7.5;
 pragma abicoder v2;
 
 interface IERC20Mintable {
-    function mint(address account_, uint256 ammount_) external;
+    function mint(address account, uint256 amount) external;
 }

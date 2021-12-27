@@ -4,7 +4,7 @@ pragma abicoder v2;
 
 import "./interfaces/IERC20.sol";
 import "./interfaces/ITulipERC20.sol";
-import "./interfaces/IBondCalculator.sol";
+import "./interfaces/IBondingCalculator.sol";
 import "./interfaces/ITreasury.sol";
 
 import "./libraries/LowGasSafeMath.sol";
@@ -292,7 +292,7 @@ contract TulipTreasury is Ownable, ITreasury {
             // convert amount to match Tulip decimals
             value_ = _amount.mul(10**Tulip.decimals()).div(10**IERC20(_token).decimals());
         } else if (isLiquidityToken[_token]) {
-            value_ = IBondCalculator(bondCalculator[_token]).valuation(_token, _amount);
+            value_ = IBondingCalculator(bondCalculator[_token]).valuation(_token, _amount);
         }
     }
 

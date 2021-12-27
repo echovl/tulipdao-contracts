@@ -47,7 +47,7 @@ contract TulipBondingCalculator is IBondingCalculator {
         _value = totalValue.mul(FixedPoint.fraction(amount_, totalSupply).decode112with18()).div(1e18);
     }
 
-    function markdown(address _pair) external view returns (uint256) {
+    function markdown(address _pair) external view override returns (uint256) {
         (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(_pair).getReserves();
 
         uint256 reserve;

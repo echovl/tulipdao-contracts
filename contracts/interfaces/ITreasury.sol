@@ -4,12 +4,12 @@ pragma abicoder v2;
 
 interface ITreasury {
     function deposit(
-        uint256 _amount,
-        address _token,
-        uint256 _profit
+        uint256 amount,
+        address token,
+        uint256 profit
     ) external returns (uint256);
 
-    function valueOf(address _token, uint256 _amount) external view returns (uint256 value_);
+    function valueOf(address token, uint256 amount) external view returns (uint256 value_);
 
-    function mintRewards(address _recipient, uint256 _amount) external;
+    function mintRewards(address recipient, uint256 amount) external;
 }

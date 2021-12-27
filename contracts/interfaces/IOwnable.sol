@@ -7,7 +7,7 @@ interface IOwnable {
 
     function renounceManagement() external;
 
-    function pushManagement(address newOwner_) external;
+    function pushManagement(address newOwner) external;
 
     function pullManagement() external;
 }

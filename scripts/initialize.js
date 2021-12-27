@@ -1,14 +1,25 @@
 const hre = require("hardhat")
 const BigNumber = hre.ethers.BigNumber
 
-const STULIP_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
-const STAKING_ADDRESS = "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"
-const DISTRIBUTOR_ADDRESS = "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318"
-const WARMUP_ADDRESS = "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"
-const TULIP_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
-const TREASURY_ADDRESS = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
-const BOND_ADDRESS = "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707"
+const STULIP_ADDRESS = "0x21ED14e9BE7B2D178c68fe1d76451074D2874482"
+const STAKING_ADDRESS = "0x78D8eDdD05106D1398AA42E48cAd249a1f1f3c49"
+const DISTRIBUTOR_ADDRESS = "0xFe10ad92EA8B78c2ab0C55e21eBB7784c8B1acbb"
+const WARMUP_ADDRESS = "0x531e45A8a4c152BfDC02526D1870b186ddc085D0"
+const TULIP_ADDRESS = "0x3De99480845342176a8E173d4292F44c206c1bf1"
+const TREASURY_ADDRESS = "0x1C681AeD326Dc9bA0A6A65b572C29592202ed7A1"
+const BOND_ADDRESS = "0x1daa690B633041Bd296977dF5439943B4d401edD"
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
+
+const TULIP_OWNER_SUPPLY = BigNumber.from("1000000000000")
+const STAKING_REWARD_RATE = 5000 // 0.5%
+
+// Bond terms
+const BOND_CONTROL_VARIABLE = 500
+const BOND_MINIMUM_PRICE = 1000 // 10 usd
+const BOND_MAX_PAYOUT = 5000 // 5% of total supply
+const BOND_FEE = 0 // 0%
+const BOND_MAX_DEBT = BigNumber.from("10000000000000000000") // max total debt, 9 decimals
+const BOND_VESTING_TERM = 129600 // 360 hours
 
 async function main() {
     const accounts = await hre.ethers.getSigners()
@@ -33,30 +44,42 @@ async function main() {
     const bond = await BOND.attach(BOND_ADDRESS)
 
     await tulip.setVault(owner.address)
-    await tulip.mint(owner.address, 100e9) // 100 TULIP
+
+    await delay(10000)
+
+    await tulip.mint(owner.address, TULIP_OWNER_SUPPLY) // 100 TULIP
     await tulip.setVault(TREASURY_ADDRESS)
 
     await stulip.initialize(STAKING_ADDRESS)
 
-    await distributor.addRecipient(STAKING_ADDRESS, 5000) // 0.5%
+    await distributor.addRecipient(STAKING_ADDRESS, STAKING_REWARD_RATE) // 0.5%
 
     await staking.setContract(0, DISTRIBUTOR_ADDRESS)
     await staking.setContract(1, WARMUP_ADDRESS)
 
     await treasury.queue(0, BOND_ADDRESS) // reserve depositor
     await treasury.queue(8, DISTRIBUTOR_ADDRESS) // reward manager
+
+    await delay(10000)
+
     await treasury.toggle(0, BOND_ADDRESS, ZERO_ADDRESS)
     await treasury.toggle(8, DISTRIBUTOR_ADDRESS, ZERO_ADDRESS)
 
     await bond.setStaking(STAKING_ADDRESS, false)
     await bond.initializeBondTerms(
-        500,
-        1000,
-        5000,
-        0,
-        BigNumber.from("1000000000000000000"),
-        129600
+        BOND_CONTROL_VARIABLE,
+        BOND_MINIMUM_PRICE,
+        BOND_MAX_PAYOUT,
+        BOND_FEE,
+        BOND_MAX_DEBT,
+        BOND_VESTING_TERM
     )
+}
+
+async function delay(ms) {
+    return new Promise((resolve, reject) => {
+        setTimeout(resolve, ms)
+    })
 }
 
 main()

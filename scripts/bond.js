@@ -1,8 +1,8 @@
 const hre = require("hardhat")
 const BigNumber = hre.ethers.BigNumber
 
-const MIM_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
-const BOND_ADDRESS = "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707"
+const MIM_ADDRESS = "0xafCF06B70897562dc0b50C1448ED5c6Bc0438c66"
+const BOND_ADDRESS = "0x4a174e8D1e5415E340526be7123787927439d973"
 
 async function main() {
     const accounts = await hre.ethers.getSigners()
@@ -16,12 +16,23 @@ async function main() {
 
     console.log("Bond Price: ", await bond.bondPrice())
 
-    const one_mim = BigNumber.from("1000000000000000000")
-    await mim.mint(owner.address, one_mim)
-    await mim.approve(BOND_ADDRESS, one_mim)
-    const res = await bond.deposit(one_mim, 1010, owner.address)
+    const hundredMIM = BigNumber.from("50000000000000000000")
+    await mim.approve(BOND_ADDRESS, hundredMIM)
+    await mim.mint(owner.address, hundredMIM)
 
-    console.log(res)
+    console.log(
+        "Bond vested percent: ",
+        await bond.percentVestedFor(owner.address)
+    )
+    //console.log("Bond payout for: ", await bond.pendingPayoutFor(owner.address))
+
+    await bond.deposit(hundredMIM, 1000000, owner.address)
+}
+
+async function delay(ms) {
+    return new Promise((resolve, reject) => {
+        setTimeout(resolve, ms)
+    })
 }
 
 main()

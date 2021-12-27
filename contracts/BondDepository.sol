@@ -6,7 +6,7 @@ import "./interfaces/IERC20.sol";
 import "./interfaces/ITreasury.sol";
 import "./interfaces/IStaking.sol";
 import "./interfaces/IStakingHelper.sol";
-import "./interfaces/IBondCalculator.sol";
+import "./interfaces/IBondingCalculator.sol";
 
 import "./libraries/FixedPoint.sol";
 import "./libraries/SafeERC20.sol";
@@ -40,7 +40,7 @@ contract TulipBondDepository is Ownable {
     address public immutable DAO; // receives profit share from bond
 
     bool public immutable isLiquidityBond; // LP and Reserve bonds are treated slightly different
-    IBondCalculator public immutable bondCalculator; // calculates value of LP tokens
+    IBondingCalculator public immutable bondCalculator; // calculates value of LP tokens
 
     IStaking public staking; // to auto-stake payout
     IStakingHelper public stakingHelper; // to stake and claim if no staking warmup
@@ -103,7 +103,7 @@ contract TulipBondDepository is Ownable {
         require(_DAO != address(0));
         DAO = _DAO;
         // bondCalculator should be address(0) if not LP bond
-        bondCalculator = IBondCalculator(_bondCalculator);
+        bondCalculator = IBondingCalculator(_bondCalculator);
         isLiquidityBond = (_bondCalculator != address(0));
     }
 

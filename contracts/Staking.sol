@@ -6,13 +6,14 @@ import "./interfaces/IERC20.sol";
 import "./interfaces/IsTulipERC20.sol";
 import "./interfaces/IWarmup.sol";
 import "./interfaces/IDistributor.sol";
+import "./interfaces/IStaking.sol";
 
 import "./libraries/LowGasSafeMath.sol";
 import "./libraries/SafeERC20.sol";
 
 import "./types/Ownable.sol";
 
-contract TulipStaking is Ownable {
+contract TulipStaking is Ownable, IStaking {
     using LowGasSafeMath for uint256;
     using LowGasSafeMath for uint32;
     using SafeERC20 for IERC20;
@@ -73,7 +74,7 @@ contract TulipStaking is Ownable {
         @param _amount uint
         @return bool
      */
-    function stake(uint256 _amount, address _recipient) external returns (bool) {
+    function stake(uint256 _amount, address _recipient) external override returns (bool) {
         rebase();
 
         Tulip.safeTransferFrom(msg.sender, address(this), _amount);
@@ -97,7 +98,7 @@ contract TulipStaking is Ownable {
         @notice retrieve sTulip from warmup
         @param _recipient address
      */
-    function claim(address _recipient) external {
+    function claim(address _recipient) external override {
         Claim memory info = warmupInfo[_recipient];
         if (epoch.number >= info.expiry && info.expiry != 0) {
             delete warmupInfo[_recipient];

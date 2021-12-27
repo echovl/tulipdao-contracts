@@ -1,52 +1,51 @@
 const hre = require("hardhat")
 const fs = require("fs")
 
-const ARGUMENTS_DIR = "./deploy/arguments"
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
+const BigNumber = hre.ethers.BigNumber
 
-function saveArguments(filename, ...args) {
-    fs.writeFileSync(`${ARGUMENTS_DIR}/${filename}`, parseArguments(...args))
-}
-
-function parseArguments(...args) {
-    const parsedArgs = args.map((arg) => {
-        return typeof arg == "string" ? `"${arg}"` : arg
-    })
-
-    return `module.exports = [${parsedArgs.join(",")}]`
-}
+const argumentsDir = "./deploy/arguments"
 
 async function main() {
     const accounts = await hre.ethers.getSigners()
+    const owner = accounts[0]
+
+    const zeroAddress = "0x0000000000000000000000000000000000000000"
+
+    const initialTulipSupply = BigNumber.from("100000000000")
+
+    // Stake parameters
+    const initialRewardRate = 5000 // 0.5%
+    const stakeEpochLength = 3600 // in seconds
+    const stakeFirstEpochTime = Math.round(Date.now() / 1000) + 300
+
+    // Bond parameters
+    const bondControlVariable = 500
+    const bondMinPrice = 1000 // 10 usd
+    const bondMaxPayout = 5000 // 5% total supply
+    const bondFee = 0
+    const bondMaxDebt = BigNumber.from("10000000000000000000") // max total debt, 9 decimals
+    const bondVestingTerm = 129600 // 36 hours
+    const bondEpochLength = 3600
 
     let mimAddress
-    let epochLength = 60 * 60 * 1
-    let firstEpochTime = Math.round(Date.now() / 1000) + 60 * 60
-
     const MIM = await hre.ethers.getContractFactory("Token")
     const mim = await MIM.deploy("Magic Internet Money", "MIM", 18)
-    await mim.deployed()
     mimAddress = mim.address
 
     saveArguments("mim.js", "Magic Internet Money", "MIM", 18)
 
-    console.log("MIM token deployed  to: ", mim.address)
-
     const TULIP = await hre.ethers.getContractFactory("TulipERC20Token")
     const tulip = await TULIP.deploy()
-    await tulip.deployed()
-
-    console.log("Tulip token deployed  to: ", tulip.address)
 
     const STULIP = await hre.ethers.getContractFactory("sTulipERC20Token")
     const sTulip = await STULIP.deploy()
-    await sTulip.deployed()
 
-    console.log("Staked Tulip token deployed  to: ", sTulip.address)
-
-    const TREASURY = await hre.ethers.getContractFactory("TulipTreasury")
-    const treasury = await TREASURY.deploy(tulip.address, mimAddress, 0)
-    await treasury.deployed()
+    const TulipTreasury = await hre.ethers.getContractFactory("TulipTreasury")
+    const tulipTreasury = await TulipTreasury.deploy(
+        tulip.address,
+        mimAddress,
+        0
+    )
 
     saveArguments(
         "treasury.js",
@@ -55,137 +54,177 @@ async function main() {
         0
     )
 
-    console.log("Treasury deployed  to: ", treasury.address)
-
-    const CALCULATOR = await hre.ethers.getContractFactory(
+    const BondingCalculator = await hre.ethers.getContractFactory(
         "TulipBondingCalculator"
     )
-    const calculator = await CALCULATOR.deploy(tulip.address)
-    await calculator.deployed()
+    const bondingCalculator = await BondingCalculator.deploy(tulip.address)
 
     saveArguments("calculator.js", tulip.address.toString())
 
-    console.log("Bonding Calculator deployed  to: ", calculator.address)
-
-    const BONDDEPOSITORY = await hre.ethers.getContractFactory(
+    const MIMBondDepository = await hre.ethers.getContractFactory(
         "TulipBondDepository"
     )
-    const bondDepository = await BONDDEPOSITORY.deploy(
+    const mimBondDepository = await MIMBondDepository.deploy(
         tulip.address,
         mimAddress,
-        treasury.address,
-        accounts[0].address,
-        ZERO_ADDRESS
+        tulipTreasury.address,
+        owner.address,
+        zeroAddress
     )
-    await bondDepository.deployed()
 
     saveArguments(
         "bondDepository.js",
         tulip.address.toString(),
         mimAddress.toString(),
-        treasury.address.toString(),
-        accounts[0].address.toString(),
-        ZERO_ADDRESS
+        tulipTreasury.address.toString(),
+        owner.address.toString(),
+        zeroAddress
     )
 
-    console.log("MIM Bond Depository deployed  to: ", bondDepository.address)
-
-    const BONDSTAKEDEPOSITORY = await hre.ethers.getContractFactory(
+    const MIMBondStakeDepository = await hre.ethers.getContractFactory(
         "TulipBondStakeDepository"
     )
-    const bondStakeDepository = await BONDSTAKEDEPOSITORY.deploy(
+    const mimBondStakeDepository = await MIMBondStakeDepository.deploy(
         tulip.address,
         sTulip.address,
         mimAddress,
-        treasury.address,
-        accounts[0].address,
-        ZERO_ADDRESS
+        tulipTreasury.address,
+        owner.address,
+        zeroAddress
     )
-    await bondStakeDepository.deployed()
 
     saveArguments(
         "bondStakeDepository.js",
         tulip.address.toString(),
         sTulip.address.toString(),
         mimAddress.toString(),
-        treasury.address.toString(),
-        accounts[0].address.toString(),
-        ZERO_ADDRESS
+        tulipTreasury.address.toString(),
+        owner.address.toString(),
+        zeroAddress
     )
 
-    console.log(
-        "MIM Bond Stake Depository deployed  to: ",
-        bondStakeDepository.address
-    )
-
-    const STAKING = await hre.ethers.getContractFactory("TulipStaking")
-    const staking = await STAKING.deploy(
+    const TulipStaking = await hre.ethers.getContractFactory("TulipStaking")
+    const tulipStaking = await TulipStaking.deploy(
         tulip.address,
         sTulip.address,
-        epochLength,
+        stakeEpochLength,
         1,
-        firstEpochTime
+        stakeFirstEpochTime
     )
-    await staking.deployed()
 
     saveArguments(
         "staking.js",
         tulip.address.toString(),
         sTulip.address.toString(),
-        epochLength,
+        stakeEpochLength,
         1,
-        firstEpochTime
+        stakeFirstEpochTime
     )
 
-    console.log("Staking deployed  to: ", staking.address)
-
-    const WARMUP = await hre.ethers.getContractFactory("TulipStakingWarmup")
-    const warmup = await WARMUP.deploy(staking.address, sTulip.address)
-    await warmup.deployed()
+    const Warmup = await hre.ethers.getContractFactory("TulipStakingWarmup")
+    const warmup = await Warmup.deploy(tulipStaking.address, sTulip.address)
 
     saveArguments(
         "warmup.js",
-        staking.address.toString(),
+        tulipStaking.address.toString(),
         sTulip.address.toString()
     )
 
-    console.log("Staking Warmup deployed  to: ", warmup.address)
-
-    const DISTRIBUTOR = await hre.ethers.getContractFactory("TulipDistributor")
-    const distributor = await DISTRIBUTOR.deploy(
-        treasury.address,
+    const Distributor = await hre.ethers.getContractFactory("TulipDistributor")
+    const distributor = await Distributor.deploy(
+        tulipTreasury.address,
         tulip.address,
-        epochLength,
-        firstEpochTime
+        stakeEpochLength,
+        stakeFirstEpochTime
     )
-    await distributor.deployed()
 
     saveArguments(
         "distributor.js",
-        treasury.address.toString(),
+        tulipTreasury.address.toString(),
         tulip.address.toString(),
-        epochLength,
-        firstEpochTime
+        stakeEpochLength,
+        stakeFirstEpochTime
     )
 
-    console.log("Distributor deployed  to: ", distributor.address)
-
-    const STAKINGHELPER = await hre.ethers.getContractFactory(
+    const StakingHelper = await hre.ethers.getContractFactory(
         "TulipStakingHelper"
     )
-    const stakingHelper = await STAKINGHELPER.deploy(
-        staking.address,
+    const stakingHelper = await StakingHelper.deploy(
+        tulipStaking.address,
         tulip.address
     )
-    await stakingHelper.deployed()
 
     saveArguments(
         "stakingHelper.js",
-        staking.address.toString(),
+        tulipStaking.address.toString(),
         tulip.address.toString()
     )
 
-    console.log("Staking Helper deployed  to: ", stakingHelper.address)
+    // setup tulip and stulip
+    await tulip.setVault(owner.address)
+    await sTulip.initialize(tulipStaking.address)
+
+    // setup staking
+    await distributor.addRecipient(tulipStaking.address, initialRewardRate)
+    await tulipStaking.setContract(0, distributor.address)
+    await tulipStaking.setContract(1, warmup.address)
+
+    // setup treasury
+    await tulipTreasury.queue(0, mimBondDepository.address) // reserve depositor
+    await tulipTreasury.queue(0, mimBondStakeDepository.address) // reserve depositor
+    await tulipTreasury.queue(8, distributor.address) // reward manager
+
+    // setup bonds
+    await mimBondDepository.setStaking(tulipStaking.address, false)
+    await mimBondDepository.initializeBondTerms(
+        bondControlVariable,
+        bondMinPrice,
+        bondMaxPayout,
+        bondFee,
+        bondMaxDebt,
+        bondVestingTerm
+    )
+    await mimBondStakeDepository.setStaking(tulipStaking.address, false)
+    await mimBondStakeDepository.initializeBondTerms(
+        bondControlVariable,
+        bondMinPrice,
+        bondMaxPayout,
+        bondFee,
+        bondMaxDebt,
+        bondVestingTerm,
+        bondEpochLength
+    )
+
+    await tulipTreasury.toggle(0, mimBondDepository.address, zeroAddress)
+    await tulipTreasury.toggle(0, mimBondStakeDepository.address, zeroAddress)
+    await tulipTreasury.toggle(8, distributor.address, zeroAddress)
+
+    await tulip.mint(owner.address, initialTulipSupply)
+    await tulip.setVault(tulipTreasury.address)
+
+    console.log("MIM: ", mim.address)
+    console.log("Tulip: ", tulip.address)
+    console.log("sTulip: ", sTulip.address)
+    console.log("Treasury: ", tulipTreasury.address)
+    console.log("Bonding Calculator: ", bondingCalculator.address)
+    console.log("MIM Bond Depository: ", mimBondDepository.address)
+    console.log("MIM Bond Stake Depository: ", mimBondStakeDepository.address)
+    console.log("Staking: ", tulipStaking.address)
+    console.log("Staking Warmup: ", warmup.address)
+    console.log("Staking Helper: ", stakingHelper.address)
+    console.log("Distributor: ", distributor.address)
+}
+
+function saveArguments(filename, ...args) {
+    fs.writeFileSync(`${argumentsDir}/${filename}`, parseArguments(...args))
+}
+
+function parseArguments(...args) {
+    const parsedArgs = args.map((arg) => {
+        return typeof arg == "string" ? `"${arg}"` : arg
+    })
+
+    return `module.exports = [${parsedArgs.join(",")}]`
 }
 
 main()

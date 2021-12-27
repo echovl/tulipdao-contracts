@@ -3,5 +3,5 @@ pragma solidity 0.7.5;
 pragma abicoder v2;
 
 interface IWarmup {
-    function retrieve(address staker_, uint256 amount_) external;
+    function retrieve(address staker, uint256 amount) external;
 }

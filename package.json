@@ -9,8 +9,10 @@
         "clean": "hardhat clean",
         "deploy:hh": "hardhat run ./scripts/deploy.js --network localhost",
         "init:hh": "hardhat run ./scripts/initialize.js --network localhost",
-        "deploy:testnet": "hardhat run ./scripts/deploy.js --network rinkeby",
         "bond:hh": "hardhat run ./scripts/bond.js --network localhost",
+        "deploy:testnet": "hardhat run ./scripts/deploy.js --network rinkeby",
+        "init:testnet": "hardhat run ./scripts/initialize.js --network rinkeby",
+        "bond:testnet": "hardhat run ./scripts/bond.js --network rinkeby",
         "hh": "hardhat node --network hardhat",
         "prettier": "prettier --write \"contracts/**/*.sol\""
     },
