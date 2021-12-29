@@ -6,4 +6,6 @@ interface IStaking {
     function stake(uint256 amount, address recipient) external returns (bool);
 
     function claim(address recipient) external;
+
+    function unstake(uint256 amount, bool trigger) external;
 }
