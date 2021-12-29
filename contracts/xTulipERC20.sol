@@ -56,6 +56,7 @@ contract xTulipERC20Token is ERC20Permit, Ownable {
         // Calculates the amount of Tulip the xTulip is worth
         uint256 what = _share.mul(sTulip.balanceOf(address(this))).div(totalShares);
         _burn(msg.sender, _share);
+        sTulip.approve(address(staking), what);
         staking.unstake(what, false);
         tulip.transfer(msg.sender, what);
     }
