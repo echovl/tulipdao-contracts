@@ -1,5 +1,6 @@
 require("@nomiclabs/hardhat-waffle")
 require("@nomiclabs/hardhat-etherscan")
+require("@nomiclabs/hardhat-vyper")
 
 require("dotenv").config()
 
@@ -41,6 +42,9 @@ module.exports = {
                 runs: 200,
             },
         },
+    },
+    vyper: {
+        version: "0.2.7",
     },
     networks: {
         ftmTestnet: {
