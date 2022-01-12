@@ -649,7 +649,7 @@ def balanceOfAt(addr: address, _block: uint256) -> uint256:
     if upoint.bias >= 0:
         return convert(upoint.base + upoint.bias, uint256)
     else:
-        return 0
+        return convert(upoint.base, uint256)
 
 
 @internal
