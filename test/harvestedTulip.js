@@ -1,10 +1,16 @@
-const { expect } = require("chai")
+const { expect, use } = require("chai")
 const { ethers } = require("hardhat")
+const { solidity } = require("ethereum-waffle")
 const bn = ethers.BigNumber
+
+use(solidity)
 
 const BASE_DIVISOR = 100
 const PRECISION = 1e9
 const WEEK = 7 * 86400
+const DAY = 86400
+const HOUR = 3600
+const TOL = 120 / WEEK
 const MAXTIME = 4 * 365 * 86400
 
 describe("HarvestedTulip", () => {
@@ -62,7 +68,7 @@ describe("HarvestedTulip", () => {
         it("locks amount of tokens and stakes it", async () => {
             const amount = bn.from(1e9)
             const end =
-                (Math.floor((await getBlockTimestamp()) / WEEK) + 2) * WEEK
+                (Math.floor((await getChainTimestamp()) / WEEK) + 2) * WEEK
 
             await tulip.connect(alice).approve(harvestedTulip.address, amount)
             await harvestedTulip.connect(alice).create_lock(amount, end)
@@ -89,7 +95,7 @@ describe("HarvestedTulip", () => {
         it("reverts if amount is zero", async () => {
             const amount = 0
             const end =
-                (Math.floor((await getBlockTimestamp()) / WEEK) + 2) * WEEK
+                (Math.floor((await getChainTimestamp()) / WEEK) + 2) * WEEK
 
             await tulip.connect(alice).approve(harvestedTulip.address, amount)
             await expect(harvestedTulip.connect(alice).create_lock(amount, end))
@@ -99,7 +105,7 @@ describe("HarvestedTulip", () => {
         it("reverts if unlock_time is in the past", async () => {
             const amount = bn.from(1e9)
             const end =
-                (Math.floor((await getBlockTimestamp()) / WEEK) - 2) * WEEK
+                (Math.floor((await getChainTimestamp()) / WEEK) - 2) * WEEK
 
             await tulip.connect(alice).approve(harvestedTulip.address, amount)
             await expect(harvestedTulip.connect(alice).create_lock(amount, end))
@@ -109,7 +115,7 @@ describe("HarvestedTulip", () => {
         it("reverts if unlock_time is greater than MAXTIME", async () => {
             const amount = bn.from(1e9)
             const end =
-                (Math.floor((await getBlockTimestamp()) / WEEK) + 10000) * WEEK
+                (Math.floor((await getChainTimestamp()) / WEEK) + 10000) * WEEK
 
             await tulip.connect(alice).approve(harvestedTulip.address, amount)
             await expect(harvestedTulip.connect(alice).create_lock(amount, end))
@@ -167,7 +173,7 @@ describe("HarvestedTulip", () => {
         it("withdraws locked tokens", async () => {
             const amount = await tulip.balanceOf(alice.address)
             const end =
-                (Math.floor((await getBlockTimestamp()) / WEEK) + 2) * WEEK
+                (Math.floor((await getChainTimestamp()) / WEEK) + 2) * WEEK
 
             await tulip.connect(alice).approve(harvestedTulip.address, amount)
             await harvestedTulip.connect(alice).create_lock(amount, end)
@@ -184,7 +190,7 @@ describe("HarvestedTulip", () => {
         it("reverts if tokens are not yet unlocked", async () => {
             const amount = await tulip.balanceOf(alice.address)
             const end =
-                (Math.floor((await getBlockTimestamp()) / WEEK) + 2) * WEEK
+                (Math.floor((await getChainTimestamp()) / WEEK) + 2) * WEEK
 
             await tulip.connect(alice).approve(harvestedTulip.address, amount)
             await harvestedTulip.connect(alice).create_lock(amount, end)
@@ -200,7 +206,7 @@ describe("HarvestedTulip", () => {
         it("uses normal ve formula if inside locked window", async () => {
             const amount = await tulip.balanceOf(alice.address)
             const end =
-                (Math.floor((await getBlockTimestamp()) / WEEK) + 2) * WEEK
+                (Math.floor((await getChainTimestamp()) / WEEK) + 2) * WEEK
 
             await tulip.connect(alice).approve(harvestedTulip.address, amount)
             await harvestedTulip.connect(alice).create_lock(amount, end)
@@ -209,7 +215,7 @@ describe("HarvestedTulip", () => {
                 alice.address,
                 1
             )
-            const timestamp = (await getBlockTimestamp()) + WEEK
+            const timestamp = (await getChainTimestamp()) + WEEK
             const veBalance = await harvestedTulip[
                 "balanceOf(address,uint256)"
             ](alice.address, timestamp)
@@ -224,7 +230,7 @@ describe("HarvestedTulip", () => {
         it("uses base if outside locked window", async () => {
             const amount = await tulip.balanceOf(alice.address)
             const end =
-                (Math.floor((await getBlockTimestamp()) / WEEK) + 2) * WEEK
+                (Math.floor((await getChainTimestamp()) / WEEK) + 2) * WEEK
 
             await tulip.connect(alice).approve(harvestedTulip.address, amount)
             await harvestedTulip.connect(alice).create_lock(amount, end)
@@ -233,7 +239,7 @@ describe("HarvestedTulip", () => {
                 alice.address,
                 1
             )
-            const timestamp = (await getBlockTimestamp()) + 5 * WEEK
+            const timestamp = (await getChainTimestamp()) + 5 * WEEK
             const veBalance = await harvestedTulip[
                 "balanceOf(address,uint256)"
             ](alice.address, timestamp)
@@ -246,7 +252,7 @@ describe("HarvestedTulip", () => {
         it("stores the checkpoints correctly", async () => {
             const amount = await tulip.balanceOf(alice.address)
             const end1 =
-                (Math.floor((await getBlockTimestamp()) / WEEK) + 2) * WEEK
+                (Math.floor((await getChainTimestamp()) / WEEK) + 2) * WEEK
 
             await tulip.connect(alice).approve(harvestedTulip.address, amount)
             await harvestedTulip.connect(alice).create_lock(amount, end1)
@@ -255,7 +261,7 @@ describe("HarvestedTulip", () => {
             await harvestedTulip.connect(alice).withdraw()
 
             const end2 =
-                (Math.floor((await getBlockTimestamp()) / WEEK) + 2) * WEEK
+                (Math.floor((await getChainTimestamp()) / WEEK) + 2) * WEEK
 
             await tulip.connect(alice).approve(harvestedTulip.address, amount)
             await harvestedTulip.connect(alice).create_lock(amount, end2)
@@ -293,13 +299,78 @@ describe("HarvestedTulip", () => {
             expect(point3.bias).to.equal(point3.slope.mul(end2 - point3.ts))
         })
     })
+
+    describe("voting power", () => {
+        it("follows a curve overtime", async () => {
+            const amount = await tulip.balanceOf(alice.address)
+            const amountP = amount.mul(PRECISION)
+            const amountB = amountP.div(100)
+
+            await tulip.connect(alice).approve(harvestedTulip.address, amount)
+
+            expect(await harvestedTulip["totalSupply()"]()).to.equal(0)
+
+            let chainTimestamp = await getChainTimestamp()
+
+            await chainSleep(
+                (Math.floor(chainTimestamp / WEEK) + 1) * WEEK - chainTimestamp
+            )
+            await chainMine()
+
+            await chainSleep(HOUR)
+
+            await harvestedTulip
+                .connect(alice)
+                .create_lock(amount, (await getChainTimestamp()) + WEEK)
+
+            await chainSleep(HOUR)
+            await chainMine()
+
+            expect(await harvestedTulip["totalSupply()"]()).to.closeTo(
+                amountB.add(amountP.div(MAXTIME).mul(WEEK - 2 * HOUR)),
+                amountB.div(100)
+            )
+            expect(
+                await harvestedTulip["balanceOf(address)"](alice.address)
+            ).to.closeTo(
+                amountB.add(amountP.div(MAXTIME).mul(WEEK - 2 * HOUR)),
+                amountB.div(100)
+            )
+
+            const t0 = await getChainTimestamp()
+
+            for (let i = 0; i < 7; i++) {
+                for (let j = 0; j < 24; j++) {
+                    await chainSleep(HOUR)
+                    await chainMine()
+                }
+
+                const dt = (await getChainTimestamp()) - t0
+
+                expect(await harvestedTulip["totalSupply()"]()).to.closeTo(
+                    amountB.add(amountP.div(MAXTIME).mul(WEEK - 2 * HOUR - dt)),
+                    amountB.div(100)
+                )
+            }
+
+            await chainSleep(HOUR)
+
+            expect(
+                await harvestedTulip["balanceOf(address)"](alice.address)
+            ).to.equal(amountB)
+        })
+    })
 })
 
-async function getBlockTimestamp() {
+async function getChainTimestamp() {
     const blockNumber = await ethers.provider.getBlockNumber()
     return (await ethers.provider.getBlock(blockNumber)).timestamp
 }
 
 async function chainSleep(ms) {
     await hre.network.provider.send("evm_increaseTime", [ms])
+}
+
+async function chainMine() {
+    await hre.network.provider.send("evm_mine")
 }
